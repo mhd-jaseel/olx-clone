@@ -5,7 +5,9 @@ const app = express();
 
 // Middlewares
 app.use(cors({
-  origin: '*',
+  origin: [
+    'https://olx-clone-git-main-jaseers-projects-fa0c53d1.vercel.app'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
