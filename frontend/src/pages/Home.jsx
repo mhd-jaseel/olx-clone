@@ -15,7 +15,7 @@ const Home = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const { data } = await api.get('/products');
+        const { data } = await api.get('/api/products');
         setProducts(data.products);
         setLoading(false);
       } catch (err) {
