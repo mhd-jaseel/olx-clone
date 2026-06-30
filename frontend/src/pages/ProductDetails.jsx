@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { FiMapPin, FiClock, FiUser, FiShare2, FiHeart } from 'react-icons/fi';
+import { FiMapPin, FiClock, FiUser, FiShare2, FiHeart, FiX } from 'react-icons/fi';
+import { AuthContext } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -9,6 +11,44 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeImage, setActiveImage] = useState(0);
+
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const handleChatClick = () => {
+    if (!user) {
+      toast.error('Please login to contact the seller');
+      navigate('/login');
+      return;
+    }
+    if (user._id === product.seller?._id) {
+      toast.error('You cannot chat with yourself for your own listing');
+      return;
+    }
+    setChatOpen(true);
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!messageText.trim()) return;
+    setSending(true);
+    try {
+      await api.post('/messages', {
+        receiver: product.seller?._id,
+        product: product._id,
+        content: messageText
+      });
+      toast.success('Message sent! Opening chats...');
+      navigate('/chats');
+    } catch (err) {
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -115,7 +155,10 @@ const ProductDetails = () => {
                 <p className="text-sm text-gray-500">Member since {new Date().getFullYear()}</p>
               </div>
             </div>
-            <button className="w-full btn-secondary py-3 flex items-center justify-center font-bold text-lg">
+            <button 
+              onClick={handleChatClick}
+              className="w-full btn-secondary py-3 flex items-center justify-center font-bold text-lg cursor-pointer"
+            >
               Chat with seller
             </button>
           </div>
@@ -131,6 +174,56 @@ const ProductDetails = () => {
           
         </div>
       </div>
+
+      {/* Chat Modal */}
+      {chatOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden border">
+            <div className="flex justify-between items-center p-4 bg-primary text-white">
+              <h3 className="font-bold text-lg">Send Message to Seller</h3>
+              <button onClick={() => setChatOpen(false)} className="hover:text-gray-200 cursor-pointer">
+                <FiX size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleSendMessage} className="p-4">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Product: <span className="font-normal text-gray-600">{product.title}</span>
+                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Price: <span className="font-normal text-gray-600">₹{product.price.toLocaleString()}</span>
+                </label>
+              </div>
+              <div className="mb-4">
+                <textarea
+                  rows="4"
+                  placeholder="Type your message here..."
+                  className="w-full border rounded p-2.5 text-sm focus:outline-none focus:border-primary"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  required
+                ></textarea>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(false)}
+                  className="border rounded px-4 py-2 text-sm font-medium hover:bg-gray-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="btn-primary px-5 py-2 text-sm rounded font-bold cursor-pointer"
+                >
+                  {sending ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

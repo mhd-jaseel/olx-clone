@@ -13,7 +13,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await register(name, email, password, 'buyer');
+      await register(name, email, password, 'user');
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
@@ -26,7 +26,7 @@ const Register = () => {
       {error && <div className="bg-red-100 text-red-600 p-3 rounded mb-4">{error}</div>}
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Name</label>
+          <label className="block text-gray-700 mb-2 font-medium">Name</label>
           <input
             type="text"
             value={name}
@@ -36,7 +36,7 @@ const Register = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Email</label>
+          <label className="block text-gray-700 mb-2 font-medium">Email</label>
           <input
             type="email"
             value={email}
@@ -46,7 +46,7 @@ const Register = () => {
           />
         </div>
         <div className="mb-6">
-          <label className="block text-gray-700 mb-2">Password (Min 6 chars)</label>
+          <label className="block text-gray-700 mb-2 font-medium">Password (Min 6 chars)</label>
           <input
             type="password"
             value={password}
@@ -56,7 +56,7 @@ const Register = () => {
             minLength={6}
           />
         </div>
-        <button type="submit" className="w-full btn-primary">
+        <button type="submit" className="w-full btn-primary font-bold py-3">
           Register
         </button>
       </form>

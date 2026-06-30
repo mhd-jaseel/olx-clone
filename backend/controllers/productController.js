@@ -24,29 +24,52 @@ export const getProducts = async (req, res, next) => {
     const pageSize = 12;
     const page = Number(req.query.pageNumber) || 1;
     
-    // Search keyword
+    // Search keyword (checks both title and description)
     const keyword = req.query.keyword
       ? {
-          title: {
-            $regex: req.query.keyword,
-            $options: 'i',
-          },
+          $or: [
+            { title: { $regex: req.query.keyword, $options: 'i' } },
+            { description: { $regex: req.query.keyword, $options: 'i' } },
+          ],
         }
       : {};
 
     // Category filter
-    const categoryFilter = req.query.category
+    const categoryFilter = req.query.category && req.query.category !== 'ALL CATEGORIES'
       ? { category: req.query.category }
       : {};
 
+    // Location filter
+    const locationFilter = req.query.location
+      ? { location: { $regex: req.query.location, $options: 'i' } }
+      : {};
+
+    // Price range filters
+    const priceFilter = {};
+    if (req.query.minPrice) {
+      priceFilter.$gte = Number(req.query.minPrice);
+    }
+    if (req.query.maxPrice) {
+      priceFilter.$lte = Number(req.query.maxPrice);
+    }
+    const combinedPriceFilter = Object.keys(priceFilter).length > 0 ? { price: priceFilter } : {};
+
     // Combine filters
-    const filter = { ...keyword, ...categoryFilter };
+    const filter = { ...keyword, ...categoryFilter, ...locationFilter, ...combinedPriceFilter };
+
+    // Dynamic sorting
+    let sortOption = { createdAt: -1 }; // Default newest
+    if (req.query.sort === 'priceAsc') {
+      sortOption = { price: 1 };
+    } else if (req.query.sort === 'priceDesc') {
+      sortOption = { price: -1 };
+    }
 
     const count = await Product.countDocuments(filter);
     
     const products = await Product.find(filter)
-      .populate('seller', 'name profileImage')
-      .sort({ createdAt: -1 })
+      .populate('seller', 'name profileImage role')
+      .sort(sortOption)
       .limit(pageSize)
       .skip(pageSize * (page - 1));
 
@@ -86,22 +109,39 @@ export const createProduct = async (req, res, next) => {
 
     // Check if files exist
     if (req.files && req.files.length > 0) {
+      const isCloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && 
+                                     !process.env.CLOUDINARY_CLOUD_NAME.includes('your_') &&
+                                     process.env.CLOUDINARY_API_KEY && 
+                                     !process.env.CLOUDINARY_API_KEY.includes('your_');
+
       for (const file of req.files) {
-        // Upload each file to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          let stream = cloudinary.uploader.upload_stream(
-            { folder: 'olx-clone/products' },
-            (error, result) => {
-              if (result) {
-                resolve(result);
-              } else {
-                reject(error);
+        if (!isCloudinaryConfigured) {
+          console.warn('[WARNING] Cloudinary is not configured. Using placeholder image.');
+          imageUrls.push('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80');
+          continue;
+        }
+
+        try {
+          // Upload each file to Cloudinary
+          const result = await new Promise((resolve, reject) => {
+            let stream = cloudinary.uploader.upload_stream(
+              { folder: 'olx-clone/products' },
+              (error, result) => {
+                if (result) {
+                  resolve(result);
+                } else {
+                  reject(error);
+                }
               }
-            }
-          );
-          streamifier.createReadStream(file.buffer).pipe(stream);
-        });
-        imageUrls.push(result.secure_url);
+            );
+            streamifier.createReadStream(file.buffer).pipe(stream);
+          });
+          imageUrls.push(result.secure_url);
+        } catch (uploadError) {
+          console.error('[ERROR] Cloudinary upload failed:', uploadError.message);
+          console.warn('Falling back to placeholder image.');
+          imageUrls.push('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80');
+        }
       }
     }
 
@@ -134,8 +174,11 @@ export const updateProduct = async (req, res, next) => {
     const product = await Product.findById(req.params.id);
 
     if (product) {
-      // Check if user is the seller
-      if (product.seller.toString() !== req.user._id.toString()) {
+      // Check if user is the seller or an admin
+      if (
+        product.seller.toString() !== req.user._id.toString() &&
+        req.user.role !== 'admin'
+      ) {
         res.status(401);
         throw new Error('User not authorized to update this product');
       }

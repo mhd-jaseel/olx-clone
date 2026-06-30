@@ -22,9 +22,11 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please select a category'],
       enum: [
+        'Mobile Phones',
+        'Cars',
+        'Motorcycles',
+        'Properties',
         'Electronics',
-        'Vehicles',
-        'Property',
         'Furniture',
         'Fashion',
         'Other',

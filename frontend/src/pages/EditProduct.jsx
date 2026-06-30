@@ -1,13 +1,13 @@
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../utils/api';
-import { FiUploadCloud, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-const CreateProduct = () => {
-  const { user } = useContext(AuthContext);
+const EditProduct = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -16,85 +16,91 @@ const CreateProduct = () => {
     category: '',
     location: '',
   });
-  const [images, setImages] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [error, setError] = useState('');
 
   const categories = [
     'Mobile Phones', 'Cars', 'Motorcycles', 'Properties', 'Electronics', 'Furniture', 'Fashion', 'Other'
   ];
 
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const { data } = await api.get(`/products/${id}`);
+        
+        // Verify ownership or admin permission
+        const sellerId = data.seller?._id || data.seller;
+        if (user && sellerId !== user._id && user.role !== 'admin') {
+          toast.error('You are not authorized to edit this product');
+          navigate('/');
+          return;
+        }
+
+        setFormData({
+          title: data.title || '',
+          description: data.description || '',
+          price: data.price || '',
+          category: data.category || '',
+          location: data.location || '',
+        });
+        setLoading(false);
+      } catch (err) {
+        toast.error('Failed to load product details');
+        navigate('/');
+      }
+    };
+
+    if (user) {
+      fetchProduct();
+    }
+  }, [id, user, navigate]);
+
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    
-    if (images.length + files.length > 5) {
-      setError('You can only upload a maximum of 5 images');
-      return;
-    }
-
-    setImages([...images, ...files]);
-
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setImagePreviews([...imagePreviews, ...newPreviews]);
-  };
-
-  const removeImage = (index) => {
-    const newImages = [...images];
-    newImages.splice(index, 1);
-    setImages(newImages);
-
-    const newPreviews = [...imagePreviews];
-    newPreviews.splice(index, 1);
-    setImagePreviews(newPreviews);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setUpdating(true);
     setError('');
 
-    const submitData = new FormData();
-    submitData.append('title', formData.title);
-    submitData.append('description', formData.description);
-    submitData.append('price', formData.price);
-    submitData.append('category', formData.category);
-    submitData.append('location', formData.location);
-    
-    images.forEach(image => {
-      submitData.append('images', image);
-    });
-
     try {
-      console.log('Submitting data to /products...');
-      const { data } = await api.post('/products', submitData);
-      console.log('Upload successful:', data);
-      toast.success('Ad posted successfully!');
-      navigate(`/product/${data._id}`);
-    } catch (err) {
-      console.error('Error submitting product:', err);
-      // Determine the best error message available
-      let errMsg = 'Failed to create product';
+      await api.put(`/products/${id}`, {
+        title: formData.title,
+        description: formData.description,
+        price: Number(formData.price),
+        category: formData.category,
+        location: formData.location,
+      });
+
+      toast.success('Ad updated successfully!');
       
-      if (err.response && err.response.data && err.response.data.message) {
-        errMsg = err.response.data.message; // Backend error
-      } else if (err.message) {
-        errMsg = err.message; // Axios error (e.g., Network Error)
+      // If admin, go back to admin products list, else go to product page
+      if (user.role === 'admin') {
+        navigate('/admin/products');
+      } else {
+        navigate(`/product/${id}`);
       }
-      
-      setError(`Error: ${errMsg}`);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || 'Failed to update product';
+      setError(errMsg);
       toast.error(errMsg);
-      setLoading(false);
+      setUpdating(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold text-primary mb-6">POST YOUR AD</h1>
+      <h1 className="text-3xl font-bold text-primary mb-6">EDIT YOUR AD</h1>
       
       <div className="bg-white border rounded-md shadow-sm p-6">
         {error && <div className="bg-red-100 text-red-600 p-3 rounded mb-4">{error}</div>}
@@ -181,45 +187,20 @@ const CreateProduct = () => {
             </div>
           </div>
 
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-primary">UPLOAD UP TO 5 PHOTOS</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative aspect-square border rounded bg-gray-50">
-                  <img src={preview} alt="Preview" className="w-full h-full object-cover rounded" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 bg-black bg-opacity-50 text-white rounded-full p-1 hover:bg-opacity-70"
-                  >
-                    <FiX size={16} />
-                  </button>
-                </div>
-              ))}
-              
-              {imagePreviews.length < 5 && (
-                <label className="aspect-square border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
-                  <FiUploadCloud size={32} className="text-primary mb-2" />
-                  <span className="text-sm font-semibold text-primary">Add photo</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => user.role === 'admin' ? navigate('/admin/products') : navigate(`/product/${id}`)}
+              className="border rounded px-6 py-3 font-semibold hover:bg-gray-50 cursor-pointer"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
-              disabled={loading}
-              className={`btn-primary px-10 py-3 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              disabled={updating}
+              className={`btn-primary px-10 py-3 ${updating ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {loading ? 'Posting...' : 'Post now'}
+              {updating ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
@@ -228,4 +209,4 @@ const CreateProduct = () => {
   );
 };
 
-export default CreateProduct;
+export default EditProduct;

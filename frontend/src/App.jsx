@@ -8,8 +8,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ProductDetails from './pages/ProductDetails';
 import CreateProduct from './pages/CreateProduct';
+import EditProduct from './pages/EditProduct';
 import MyListings from './pages/MyListings';
 import SearchResults from './pages/SearchResults';
+import Chats from './pages/Chats';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminProducts from './pages/AdminProducts';
@@ -38,10 +40,26 @@ function App() {
               } 
             />
             <Route 
+              path="/product/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <EditProduct />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/my-listings" 
               element={
                 <ProtectedRoute>
                   <MyListings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/chats" 
+              element={
+                <ProtectedRoute>
+                  <Chats />
                 </ProtectedRoute>
               } 
             />

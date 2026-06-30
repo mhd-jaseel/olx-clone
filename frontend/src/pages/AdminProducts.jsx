@@ -102,12 +102,20 @@ const AdminProducts = () => {
                     {product.seller?.name || 'Unknown'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => deleteHandler(product._id)}
-                      className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex justify-end space-x-2">
+                      <Link
+                        to={`/product/${product._id}/edit`}
+                        className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-md transition-colors"
+                      >
+                        Edit
+                      </Link>
+                      <button
+                        onClick={() => deleteHandler(product._id)}
+                        className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
