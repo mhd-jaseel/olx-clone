@@ -12,6 +12,7 @@ import EditProduct from './pages/EditProduct';
 import MyListings from './pages/MyListings';
 import SearchResults from './pages/SearchResults';
 import Chats from './pages/Chats';
+import Wishlist from './pages/Wishlist';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminProducts from './pages/AdminProducts';
@@ -60,6 +61,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Chats />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/wishlist" 
+              element={
+                <ProtectedRoute>
+                  <Wishlist />
                 </ProtectedRoute>
               } 
             />

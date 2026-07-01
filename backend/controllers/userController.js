@@ -34,3 +34,53 @@ export const deleteUser = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Get user wishlist
+// @route   GET /api/users/wishlist
+// @access  Private
+export const getWishlist = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).populate('wishlist');
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+    res.json(user.wishlist || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle wishlist item (add/remove)
+// @route   POST /api/users/wishlist
+// @access  Private
+export const toggleWishlist = async (req, res, next) => {
+  try {
+    const { productId } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+
+    if (!user.wishlist) {
+      user.wishlist = [];
+    }
+
+    const isAlreadyWishlisted = user.wishlist.some(id => id.toString() === productId);
+
+    if (isAlreadyWishlisted) {
+      // Remove it
+      user.wishlist = user.wishlist.filter(id => id.toString() !== productId);
+    } else {
+      // Add it
+      user.wishlist.push(productId);
+    }
+
+    await user.save();
+    res.json(user.wishlist);
+  } catch (error) {
+    next(error);
+  }
+};

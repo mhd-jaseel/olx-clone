@@ -1,6 +1,12 @@
 import Product from '../models/Product.js';
 import cloudinary from '../config/cloudinary.js';
 import streamifier from 'streamifier';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Helper function to upload image to cloudinary via memory stream
 const streamUpload = (req) => {
@@ -116,9 +122,26 @@ export const createProduct = async (req, res, next) => {
 
       for (const file of req.files) {
         if (!isCloudinaryConfigured) {
-          console.warn('[WARNING] Cloudinary is not configured. Using placeholder image.');
-          imageUrls.push('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80');
-          continue;
+          console.warn('[WARNING] Cloudinary is not configured. Saving file locally.');
+          try {
+            const uploadsDir = path.join(__dirname, '../uploads');
+            await fs.mkdir(uploadsDir, { recursive: true });
+
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            const ext = path.extname(file.originalname) || '.jpg';
+            const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+            const filePath = path.join(uploadsDir, filename);
+
+            await fs.writeFile(filePath, file.buffer);
+
+            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+            imageUrls.push(fileUrl);
+            continue;
+          } catch (localUploadError) {
+            console.error('[ERROR] Local upload failed, falling back to placeholder:', localUploadError.message);
+            imageUrls.push('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80');
+            continue;
+          }
         }
 
         try {
@@ -139,8 +162,24 @@ export const createProduct = async (req, res, next) => {
           imageUrls.push(result.secure_url);
         } catch (uploadError) {
           console.error('[ERROR] Cloudinary upload failed:', uploadError.message);
-          console.warn('Falling back to placeholder image.');
-          imageUrls.push('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80');
+          console.warn('Falling back to local upload fallback.');
+          try {
+            const uploadsDir = path.join(__dirname, '../uploads');
+            await fs.mkdir(uploadsDir, { recursive: true });
+
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            const ext = path.extname(file.originalname) || '.jpg';
+            const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+            const filePath = path.join(uploadsDir, filename);
+
+            await fs.writeFile(filePath, file.buffer);
+
+            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+            imageUrls.push(fileUrl);
+          } catch (localUploadError) {
+            console.error('[ERROR] Local upload fallback failed:', localUploadError.message);
+            imageUrls.push('https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80');
+          }
         }
       }
     }

@@ -68,22 +68,33 @@ const SearchResults = () => {
     setSearchParams(nextParams);
   };
 
-  const handlePriceSubmit = (e) => {
-    e.preventDefault();
-    const nextParams = new URLSearchParams(searchParams);
-    if (minInput) nextParams.set('minPrice', minInput);
-    else nextParams.delete('minPrice');
-    
-    if (maxInput) nextParams.set('maxPrice', maxInput);
-    else nextParams.delete('maxPrice');
-    
-    setSearchParams(nextParams);
-  };
+  // Debounce filter updates to searchParams for dynamic real-time filtering
+  useEffect(() => {
+    if (
+      locInput === location &&
+      minInput === minPrice &&
+      maxInput === maxPrice
+    ) {
+      return;
+    }
 
-  const handleLocationSubmit = (e) => {
-    e.preventDefault();
-    updateParam('location', locInput);
-  };
+    const delayDebounceFn = setTimeout(() => {
+      const nextParams = new URLSearchParams(searchParams);
+      
+      if (locInput.trim()) nextParams.set('location', locInput.trim());
+      else nextParams.delete('location');
+
+      if (minInput) nextParams.set('minPrice', minInput);
+      else nextParams.delete('minPrice');
+
+      if (maxInput) nextParams.set('maxPrice', maxInput);
+      else nextParams.delete('maxPrice');
+
+      setSearchParams(nextParams);
+    }, 400);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [locInput, minInput, maxInput, location, minPrice, maxPrice, searchParams, setSearchParams]);
 
   const resetFilters = () => {
     setSearchParams(query ? { q: query } : {});
@@ -153,7 +164,7 @@ const SearchResults = () => {
           {/* Location Filter */}
           <div className="mb-6 pb-6 border-b">
             <h3 className="font-bold text-primary text-sm mb-3">Location</h3>
-            <form onSubmit={handleLocationSubmit} className="flex gap-2">
+            <form onSubmit={(e) => e.preventDefault()}>
               <input 
                 type="text" 
                 placeholder="E.g. Mumbai, Kerala" 
@@ -161,17 +172,14 @@ const SearchResults = () => {
                 onChange={(e) => setLocInput(e.target.value)}
                 className="w-full border rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary"
               />
-              <button type="submit" className="bg-primary text-white px-3 py-1.5 rounded hover:bg-opacity-95 text-xs font-bold cursor-pointer">
-                Go
-              </button>
             </form>
           </div>
 
           {/* Price Range Filter */}
           <div>
             <h3 className="font-bold text-primary text-sm mb-3">Price Range (₹)</h3>
-            <form onSubmit={handlePriceSubmit}>
-              <div className="flex gap-2 mb-3">
+            <form onSubmit={(e) => e.preventDefault()}>
+              <div className="flex gap-2">
                 <input 
                   type="number" 
                   placeholder="Min" 
@@ -189,12 +197,6 @@ const SearchResults = () => {
                   min="0"
                 />
               </div>
-              <button 
-                type="submit" 
-                className="w-full btn-secondary text-xs font-bold py-2 rounded cursor-pointer"
-              >
-                Apply Price
-              </button>
             </form>
           </div>
         </div>

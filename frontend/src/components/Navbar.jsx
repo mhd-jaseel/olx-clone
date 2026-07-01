@@ -1,10 +1,12 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiSearch, FiPlus, FiUser, FiLogOut, FiMapPin, FiMessageSquare } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiUser, FiLogOut, FiMapPin, FiMessageSquare, FiHeart } from 'react-icons/fi';
 import { AuthContext } from '../context/AuthContext';
+import { WishlistContext } from '../context/WishlistContext';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
+  const { wishlist } = useContext(WishlistContext);
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState('');
   const [location, setLocation] = useState('');
@@ -79,6 +81,17 @@ const Navbar = () => {
                 <Link to="/chats" className="text-primary hover:text-[#002f34] font-bold flex items-center gap-1.5 text-sm transition-colors">
                   <FiMessageSquare size={20} />
                   <span className="hidden md:inline">Chats</span>
+                </Link>
+
+                {/* Wishlist Link */}
+                <Link to="/wishlist" className="text-primary hover:text-[#002f34] font-bold flex items-center gap-1.5 text-sm transition-colors relative">
+                  <FiHeart size={20} />
+                  <span className="hidden md:inline">Wishlist</span>
+                  {wishlist.length > 0 && (
+                    <span className="absolute -top-2 -right-2.5 bg-red-500 text-white rounded-full text-[10px] w-4 h-4 flex items-center justify-center font-extrabold shadow-sm">
+                      {wishlist.length}
+                    </span>
+                  )}
                 </Link>
 
                 {user.role !== 'admin' && (

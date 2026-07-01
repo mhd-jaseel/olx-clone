@@ -3,9 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { FiMapPin, FiClock, FiUser, FiShare2, FiHeart, FiX } from 'react-icons/fi';
 import { AuthContext } from '../context/AuthContext';
+import { WishlistContext } from '../context/WishlistContext';
 import toast from 'react-hot-toast';
 
 const ProductDetails = () => {
+  const { toggleWishlist, isWishlisted } = useContext(WishlistContext);
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,8 +129,25 @@ const ProductDetails = () => {
             <div className="flex justify-between items-start mb-2">
               <h1 className="text-4xl font-bold text-gray-900">₹{product.price.toLocaleString()}</h1>
               <div className="flex gap-4 text-gray-500">
-                <button className="hover:text-primary"><FiShare2 size={24} /></button>
-                <button className="hover:text-red-500"><FiHeart size={24} /></button>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    toast.success('Link copied to clipboard!');
+                  }}
+                  className="hover:text-primary cursor-pointer"
+                  title="Share listing"
+                >
+                  <FiShare2 size={24} />
+                </button>
+                <button 
+                  onClick={() => toggleWishlist(product._id)}
+                  className={`cursor-pointer transition-colors duration-200 ${
+                    isWishlisted(product._id) ? 'text-red-500 hover:text-red-600' : 'hover:text-red-500'
+                  }`}
+                  title={isWishlisted(product._id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  <FiHeart size={24} fill={isWishlisted(product._id) ? 'currentColor' : 'none'} />
+                </button>
               </div>
             </div>
             <p className="text-xl text-gray-700 mb-6">{product.title}</p>
